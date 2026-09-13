@@ -228,9 +228,25 @@ class DedupeTests(TempFilesTestCase):
 
     def test_copy_markers_are_normalized(self) -> None:
         self.assertEqual(normalize_name("Track A (1).wav"), normalize_name("Track A.wav"))
+        self.assertEqual(normalize_name("Track A（1）.wav"), normalize_name("Track A.wav"))
         self.assertEqual(normalize_name("Track A - Copy 2.aiff"), normalize_name("Track A.aiff"))
         self.assertEqual(normalize_name("Track A-1.au"), normalize_name("Track A.au"))
+        self.assertEqual(normalize_name("Track A_2.wav"), normalize_name("Track A.wav"))
         self.assertNotEqual(normalize_name("Track A.wav"), normalize_name("Track B.wav"))
+        # Real titles keep their number; only copy markers are stripped.
+        self.assertNotEqual(normalize_name("Demo Track 1.wav"), normalize_name("Demo Track 2.wav"))
+
+    def test_numbered_titles_are_not_treated_as_exact_copies(self) -> None:
+        first = self.root / "Demo Track 1.wav"
+        second = self.root / "Demo Track 2.wav"
+        write_wav(first, sine_frames(RATE, frequency=220.0))
+        write_wav(second, sine_frames(RATE, frequency=1000.0))
+        report = dedupe_folder(str(self.root))
+        self.assertEqual(report["summary"]["exact_group_count"], 0)
+        self.assertEqual(len(report["exact_groups"]), 0)
+        candidate = report["candidates"][0]
+        self.assertTrue(any("different track in a series" in reason for reason in candidate["reasons"]))
+        self.assertEqual(candidate["suggested_keep"], str(first))
 
 
 if __name__ == "__main__":

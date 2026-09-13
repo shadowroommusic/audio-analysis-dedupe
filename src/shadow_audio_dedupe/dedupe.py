@@ -11,7 +11,9 @@ from .model import AudioInfo
 COPY_MARKER_PATTERNS = (
     re.compile(r"\s*[\(\[\{]\s*(?:copy|kopie|コピー|dup(?:licate)?|\d{1,3})\s*[\)\]\}]\s*$", re.IGNORECASE),
     re.compile(r"\s*[-_ ]\s*copy(?:\s*\d{1,3})?\s*$", re.IGNORECASE),
-    re.compile(r"\s*[-_]\s*\d{1,2}\s*$"),
+    # Only "- 1" / "_1" style markers: a bare trailing number is usually a real title
+    # ("Demo Track 1"), so it must stay part of the name.
+    re.compile(r"\s*[-_]\s*\d{1,3}\s*$"),
 )
 
 
