@@ -1,59 +1,111 @@
 # Audio Analysis & Dedupe
 
-This independent ShadowRoom Music plugin (a Shadow Producers tool) inspects an audio folder and answers two questions:
+An MCP server that inspects an audio folder and answers two questions: *what is inside these
+files?*, and *which of them are duplicates?*
 
-1. What is inside these files (size, duration, sample rate, channels, codec, bitrate)?
-2. Which files are duplicates, and how do two versions of the same track differ?
+[中文说明](README.zh-CN.md) · License: [AGPL-3.0](LICENSE)
 
-It is read-only by design. It never deletes, moves, renames, or rewrites a file, and it never touches a vendor database.
+## Features
 
-## Dependency-free analysis
+- **Library analysis.** Size, duration, sample rate, channels, codec and bitrate for every file in
+  a folder (recursively if you want).
+- **Exact duplicates.** Byte-identical files, grouped by SHA-256 with a suggested file to keep.
+- **Same audio, different container.** Files whose decoded PCM stream is identical (for example the
+  same master exported as WAV, AIFF and AU) are reported separately.
+- **Near-duplicate candidates.** Name (with `(1)`, `- copy`, `（1）` style suffixes normalised),
+  duration and size are compared, with an explicit list of differences for each candidate pair.
+- **Read-only by design.** It never deletes, moves, renames or rewrites a file, and never touches a
+  vendor database.
 
-- WAV (`.wav`, `.wave`) is parsed with the standard library `wave` module.
-- AIFF/AIFF-C (`.aif`, `.aiff`, `.aifc`) is parsed with the standard library `aifc` module, with a built-in IFF chunk parser as the fallback for Python versions where `aifc` was removed.
-- AU/SND (`.au`, `.snd`) is parsed with `sunau`, with a built-in header parser as the fallback.
-- Everything else (MP3, M4A, FLAC, OGG, …) is read through `ffprobe` when it is available on `PATH`, or through `SHADOW_FFPROBE=/path/to/ffprobe`. Without `ffprobe`, unsupported containers are still hashed and listed, with a warning that metadata is unavailable.
+## Requirements
 
-For PCM containers the plugin also records an `audio_sha256` of the decoded sample stream, so the same recording stored as WAV, AIFF and AU is detected even though the files themselves differ byte for byte.
+| | |
+| --- | --- |
+| OS | macOS, Linux or Windows |
+| Python | 3.9 or newer |
+| Optional | `ffprobe` on `PATH` (or `SHADOW_FFPROBE`) for formats outside WAV/AIFF/AU |
 
-## Install and run
+## Install
+
+### As a Codex plugin
+
+```sh
+codex plugin marketplace add shadowroommusic/audio-analysis-dedupe
+codex plugin add audio-analysis-dedupe@shadowroom
+```
+
+### In any other MCP client
+
+```json
+{
+  "mcpServers": {
+    "audio-analysis-dedupe": {
+      "command": "python3",
+      "args": ["mcp_server.py"],
+      "cwd": "/path/to/audio-analysis-dedupe"
+    }
+  }
+}
+```
+
+### CLI only
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install -U pip
 .venv/bin/pip install -e .
+.venv/bin/shadow-audio-dedupe --help
+```
 
-# Analyze files or whole folders
+## Configuration
+
+| Option | Default | Used for |
+| --- | --- | --- |
+| `SHADOW_FFPROBE` | auto-detected | path to `ffprobe` for non-PCM containers |
+| `--threshold` | `0.72` | similarity threshold for near-duplicate candidates |
+| `--output` | stdout | write the JSON report to a file |
+
+## Tools
+
+| Tool | What it does |
+| --- | --- |
+| `analyze_file` | Analyse a single file (format, duration, sample rate, channels, bitrate) |
+| `dedupe_folder` | Analyse a folder and group duplicates (`recursive`, `threshold`, `max_candidates`) |
+
+CLI equivalents: `shadow-audio-dedupe analyze --path <file-or-folder>` and
+`shadow-audio-dedupe dedupe --folder <folder>`.
+
+## Usage
+
+```sh
+# what is in this crate?
 .venv/bin/shadow-audio-dedupe analyze --path ~/Music/Crate --output analysis.json
 
-# Group exact duplicates and near-duplicate candidates
+# what is duplicated, and how do the versions differ?
 .venv/bin/shadow-audio-dedupe dedupe --folder ~/Music/Crate --threshold 0.72 --output duplicates.json
 ```
 
-## What the dedupe report contains
+The dedupe report contains `exact_groups`, `identical_audio_groups`, `candidates` (each with
+`reasons` and `differences`) and a `summary` with the redundant file count and bytes.
 
-- `exact_groups`: files with an identical SHA-256, plus a `suggested_keep` and the reason for that suggestion.
-- `identical_audio_groups`: files whose decoded sample stream is identical but whose container or header differs.
-- `candidates`: near-duplicates found through the normalized file name, duration and size, each with `reasons` and an explicit `differences` list (duration, size, sample rate, channels, bitrate, bit depth, container/codec).
-- `summary`: redundant file count, redundant bytes, duplicate-free files and the active threshold.
+## Safety
 
-A trailing `(1)`, `[2]`, `- copy`, `_copy2`, `- 1` or full-width `（1）` marker is stripped before names are compared, which is exactly the "song a（1） vs song a" case.
+- Read-only: nothing is modified, and no vendor database is opened.
+- Reports are written only to the path you pass with `--output` (or to stdout).
 
-## MCP
+## Troubleshooting
 
-`.mcp.json` exposes two read-only tools:
+| Symptom | What to do |
+| --- | --- |
+| Metadata unavailable for MP3/FLAC | Install `ffmpeg`/`ffprobe`, or set `SHADOW_FFPROBE` to its path. |
+| Everything looks like a near-duplicate | Raise `--threshold` (for example `0.85`). |
+| Very large folders are slow | Narrow the folder, or run `analyze` first to see what is inside. |
 
-- `analyze_file` — analyze one file.
-- `dedupe_folder` — analyze a folder (`recursive`, `threshold`, `max_candidates`).
+## Contributing
 
-## Tests
-
-```sh
-PYTHONPATH=src python3 -m unittest discover -s tests -v
-```
-
-The tests build their own WAV fixtures, AIFF/AIFF-C and AU containers with the standard library, so no audio sample files are required.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Implementation notes live in
+[docs/internals.md](docs/internals.md).
 
 ## License
 
-MIT for this plugin. It has no runtime dependency; optional `ffprobe` usage is subject to the FFmpeg license of your local installation.
+AGPL-3.0 — see [LICENSE](LICENSE). Optional `ffprobe` usage is subject to the license of your local
+FFmpeg installation.
