@@ -20,6 +20,7 @@ For PCM containers the plugin also records an `audio_sha256` of the decoded samp
 
 ```sh
 python3 -m venv .venv
+.venv/bin/pip install -U pip
 .venv/bin/pip install -e .
 
 # Analyze files or whole folders
