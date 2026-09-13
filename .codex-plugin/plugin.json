@@ -1,0 +1,18 @@
+{
+  "name": "audio-analysis-dedupe",
+  "version": "0.1.0",
+  "description": "Offline audio analysis and duplicate detection for DJ libraries",
+  "author": { "name": "Shadow Producers" },
+  "license": "MIT",
+  "keywords": ["audio", "duplicate-detection", "dj", "library", "analysis"],
+  "interface": {
+    "displayName": "Audio Analysis & Dedupe",
+    "shortDescription": "Inspect audio properties and find duplicate tracks.",
+    "longDescription": "Dependency-free analysis of WAV, AIFF and AU files with an optional ffprobe fallback. Reports size, duration, sample rate, channels, codec and bitrate, groups exact SHA-256 duplicates, and lists metadata-based near-duplicate candidates with an explicit difference list. It never deletes or modifies a file.",
+    "developerName": "Shadow Producers",
+    "category": "Music",
+    "capabilities": ["audio-analysis", "duplicate-detection", "library-audit"],
+    "defaultPrompt": "Find duplicate tracks in my music folder."
+  },
+  "mcpServers": "./.mcp.json"
+}

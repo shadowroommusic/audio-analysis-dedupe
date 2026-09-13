@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "audio-analysis-dedupe": {
+      "command": "python3",
+      "args": ["-m", "shadow_audio_dedupe.mcp_server"],
+      "cwd": "${pluginRoot}"
+    }
+  }
+}
