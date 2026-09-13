@@ -3,6 +3,8 @@
 An MCP server that inspects an audio folder and answers two questions: *what is inside these
 files?*, and *which of them are duplicates?*
 
+Works with any MCP-compatible agent or client.
+
 [中文说明](README.zh-CN.md) · License: [AGPL-3.0](LICENSE)
 
 ## Features
