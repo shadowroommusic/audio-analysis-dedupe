@@ -3,14 +3,23 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "shadow-audio-analysis-dedupe"
-version = "0.1.0"
-description = "Offline audio analysis and duplicate detection for DJ libraries"
+name = "audio-analysis-dedupe"
+version = "0.2.0"
+description = "音频分析与重复歌曲检测（ShadowRoom Music）"
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["audio", "duplicate-detection", "dj", "mcp", "shadowroom"]
 dependencies = []
+
+[project.urls]
+Homepage = "https://shadowroom.cn"
+Tools = "https://shadowroom.cn/tools"
+Repository = "https://github.com/shadowroommusic"
 
 [project.scripts]
 shadow-audio-dedupe = "shadow_audio_dedupe.cli:main"
+shadow-audio-dedupe-mcp = "shadow_audio_dedupe.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import os
 import shutil
@@ -14,6 +15,7 @@ from unittest import mock
 from shadow_audio_dedupe.analyze import analyze_file, analyze_folder
 from shadow_audio_dedupe.dedupe import dedupe, dedupe_folder, normalize_name
 from shadow_audio_dedupe.readers import read_aiff_manual, read_au_manual
+from shadow_audio_dedupe import mcp_server
 
 RATE = 8000
 
@@ -247,6 +249,51 @@ class DedupeTests(TempFilesTestCase):
         candidate = report["candidates"][0]
         self.assertTrue(any("different track in a series" in reason for reason in candidate["reasons"]))
         self.assertEqual(candidate["suggested_keep"], str(first))
+
+
+class McpProtocolTests(TempFilesTestCase):
+    """The server must answer the way any MCP client expects, not just Codex."""
+
+    def test_ping_and_negotiation_methods_return_empty_results(self) -> None:
+        for method, expected in (
+            ("ping", {}),
+            ("resources/list", {"resources": []}),
+            ("resources/templates/list", {"resourceTemplates": []}),
+            ("prompts/list", {"prompts": []}),
+            ("logging/setLevel", {}),
+        ):
+            reply = mcp_server.handle({"jsonrpc": "2.0", "id": 1, "method": method, "params": {}})
+            self.assertEqual(reply["result"], expected, method)
+            self.assertNotIn("error", reply)
+
+    def test_initialize_echoes_the_client_protocol_version(self) -> None:
+        reply = mcp_server.handle(
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05"}}
+        )
+        self.assertEqual(reply["result"]["protocolVersion"], "2024-11-05")
+        self.assertEqual(reply["result"]["serverInfo"]["name"], "audio-analysis-dedupe")
+
+    def test_tool_failure_is_reported_with_is_error(self) -> None:
+        reply = mcp_server.handle(
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": "analyze_file", "arguments": {"path": str(self.root / "missing.wav")}},
+            }
+        )
+        self.assertTrue(reply["result"]["isError"])
+        self.assertIn("FileNotFoundError", reply["result"]["content"][0]["text"])
+
+    def test_tool_call_succeeds_through_the_handler(self) -> None:
+        path = self.root / "kick.wav"
+        write_wav(path, sine_frames(RATE))
+        reply = mcp_server.handle(
+            {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "analyze_file", "arguments": {"path": str(path)}}}
+        )
+        payload = json.loads(reply["result"]["content"][0]["text"])
+        self.assertEqual(payload["codec"], "pcm_s16le")
+        self.assertNotIn("isError", reply["result"])
 
 
 if __name__ == "__main__":

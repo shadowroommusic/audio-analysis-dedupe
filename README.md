@@ -1,6 +1,6 @@
 # Audio Analysis & Dedupe
 
-This independent Shadow Producers plugin inspects an audio folder and answers two questions:
+This independent ShadowRoom Music plugin (a Shadow Producers tool) inspects an audio folder and answers two questions:
 
 1. What is inside these files (size, duration, sample rate, channels, codec, bitrate)?
 2. Which files are duplicates, and how do two versions of the same track differ?
