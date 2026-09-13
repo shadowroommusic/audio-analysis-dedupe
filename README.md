@@ -3,6 +3,9 @@
 An MCP server that inspects an audio folder and answers two questions: *what is inside these
 files?*, and *which of them are duplicates?*
 
+检查音频文件夹：文件里是什么（时长／采样率／声道／编码／码率），以及哪些是重复的
+（完全重复、同音频不同容器、近似重复候选）。
+
 Works with any MCP-compatible agent or client.
 
 [中文说明](README.zh-CN.md) · License: [AGPL-3.0](LICENSE)
