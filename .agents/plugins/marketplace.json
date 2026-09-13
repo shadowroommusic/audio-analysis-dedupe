@@ -1,0 +1,20 @@
+{
+  "name": "shadowroom",
+  "interface": {
+    "displayName": "ShadowRoom"
+  },
+  "plugins": [
+    {
+      "name": "audio-analysis-dedupe",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Music"
+    }
+  ]
+}
