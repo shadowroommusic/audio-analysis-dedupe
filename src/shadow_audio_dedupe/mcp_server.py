@@ -5,6 +5,7 @@ import sys
 
 from .analyze import analyze_file, analyze_folder
 from .dedupe import dedupe_folder
+from .groove import groove_to_pattern
 from .melody import hum_to_midi
 from .model import to_json
 
@@ -12,6 +13,7 @@ TOOLS = {
     "analyze_file": "Report size, duration, sample rate, channels, codec and bitrate for one audio file.",
     "dedupe_folder": "Group exact SHA-256 duplicates and list near-duplicate candidates in a folder. Never deletes files.",
     "hum_to_midi": "Detect the melody in a monophonic WAV recording (a hum) and write it as a Type-0 MIDI file.",
+    "groove_to_pattern": "Turn a hummed or tapped groove into a 16-step drum pattern (kick / snare / hat) the synth can render.",
 }
 
 SERVER_NAME = "audio-analysis-dedupe"
@@ -33,6 +35,18 @@ def _schema(name: str) -> dict:
         return {
             "type": "object",
             "properties": {"path": {"type": "string", "description": "Absolute path to an audio file."}},
+            "required": ["path"],
+            "additionalProperties": False,
+        }
+    if name == "groove_to_pattern":
+        return {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "WAV recording of the hummed or tapped groove."},
+                "bpm": {"type": "number", "description": "Grid tempo; estimated from the onsets when omitted."},
+                "bars": {"type": "integer", "default": 2},
+                "steps": {"type": "integer", "default": 16},
+            },
             "required": ["path"],
             "additionalProperties": False,
         }
@@ -109,6 +123,13 @@ def handle(message: dict) -> "dict | None":
                 recursive=bool(arguments.get("recursive", True)),
                 threshold=float(arguments.get("threshold", 0.72)),
                 max_candidates=int(arguments.get("max_candidates", 200)),
+            )
+        elif name == "groove_to_pattern":
+            value = groove_to_pattern(
+                arguments["path"],
+                bpm=float(arguments["bpm"]) if arguments.get("bpm") else None,
+                bars=int(arguments.get("bars", 2)),
+                steps=int(arguments.get("steps", 16)),
             )
         elif name == "hum_to_midi":
             value = hum_to_midi(

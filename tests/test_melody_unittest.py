@@ -56,6 +56,22 @@ class MelodyTests(unittest.TestCase):
         self.assertEqual(detect_notes(noise, RATE, min_note_ms=120, min_confidence=0.4), [])
         self.assertEqual(detect_notes(np.zeros(RATE, dtype=np.float32), RATE), [])
 
+    def test_noise_does_not_report_an_octave_high_pitch(self):
+        """A decaying autocorrelation used to be read as its first lag (a bogus ~1.2 kHz note)."""
+        rng = np.random.default_rng(11)
+        for scale in (0.005, 0.02, 0.08):
+            noise = (rng.standard_normal(RATE) * scale).astype(np.float32)
+            for note in detect_notes(noise, RATE, min_note_ms=120, min_confidence=0.4):
+                self.assertLess(note.midi, 84)  # never invent a very high note from noise
+
+    def test_quiet_recording_with_a_burst_still_finds_the_note(self):
+        rng = np.random.default_rng(3)
+        silence = rng.standard_normal(RATE // 2).astype(np.float32) * 0.002
+        burst = tone(64, 500, amplitude=0.2)
+        tail = rng.standard_normal(RATE // 3).astype(np.float32) * 0.002
+        notes = detect_notes(np.concatenate([silence, burst, tail]), RATE, min_note_ms=150, min_confidence=0.4)
+        self.assertEqual([note.midi for note in notes], [64])
+
     def test_octave_does_not_change_the_note_names(self):
         low = detect_notes(np.concatenate([tone(48, 450)]), RATE, min_note_ms=150, min_confidence=0.4)
         high = detect_notes(np.concatenate([tone(72, 450)]), RATE, min_note_ms=150, min_confidence=0.4)

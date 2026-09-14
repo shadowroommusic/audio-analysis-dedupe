@@ -87,7 +87,22 @@ def _frame_pitch(frame: "np.ndarray", rate: int, fmin: float, fmax: float) -> "t
     high = min(size - 1, int(rate / fmin))
     if high <= low:
         return 0.0, 0.0
-    index = int(np.argmax(acf[low:high])) + low
+    window = acf[low:high]
+    if window.size < 3:
+        return 0.0, 0.0
+    # Only a local maximum counts as a period. White noise decays monotonically, and its highest
+    # value sits at the first lag of the window — reading that as a pitch was a real bug (measured on
+    # a noisy recording, reported as 1.2 kHz).
+    interior = np.where((window[1:-1] > window[:-2]) & (window[1:-1] >= window[2:]))[0] + 1
+    if interior.size == 0:
+        return 0.0, 0.0
+    best = int(interior[int(np.argmax(window[interior]))])
+    confidence = float(window[best])
+    if confidence < 0.3:
+        return 0.0, 0.0
+    # Prefer the lowest strong peak: it is the fundamental, not an octave-down multiple.
+    strong = interior[window[interior] >= 0.85 * confidence]
+    index = int(strong[0]) + low
     confidence = float(acf[index])
     if 0 < index < size - 1:
         a, b, c = float(acf[index - 1]), float(acf[index]), float(acf[index + 1])
