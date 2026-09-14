@@ -6,6 +6,7 @@ import sys
 from .analyze import analyze_file, analyze_folder
 from .dedupe import dedupe_folder
 from .groove import groove_to_pattern
+from .listen import detect_key, detect_tempo
 from .melody import hum_to_midi
 from .model import to_json
 
@@ -14,6 +15,8 @@ TOOLS = {
     "dedupe_folder": "Group exact SHA-256 duplicates and list near-duplicate candidates in a folder. Never deletes files.",
     "hum_to_midi": "Detect the melody in a monophonic WAV recording (a hum) and write it as a Type-0 MIDI file.",
     "groove_to_pattern": "Turn a hummed or tapped groove into a 16-step drum pattern (kick / snare / hat) the synth can render.",
+    "detect_tempo": "Estimate the tempo of any audio file (WAV, or mp3/m4a/flac through a decoder), with a confidence.",
+    "detect_key": "Estimate the musical key of any audio file, as a name plus its Camelot code for DJs.",
 }
 
 SERVER_NAME = "audio-analysis-dedupe"
@@ -31,6 +34,13 @@ EMPTY_RESULTS = {
 
 
 def _schema(name: str) -> dict:
+    if name in ("detect_tempo", "detect_key"):
+        return {
+            "type": "object",
+            "properties": {"path": {"type": "string", "description": "Absolute path to an audio file (any format the machine can decode)."}},
+            "required": ["path"],
+            "additionalProperties": False,
+        }
     if name == "analyze_file":
         return {
             "type": "object",
@@ -115,7 +125,11 @@ def handle(message: dict) -> "dict | None":
     name = params.get("name")
     arguments = params.get("arguments") or {}
     try:
-        if name == "analyze_file":
+        if name == "detect_tempo":
+            value = detect_tempo(arguments["path"])
+        elif name == "detect_key":
+            value = detect_key(arguments["path"])
+        elif name == "analyze_file":
             value = to_json(analyze_file(arguments["path"]))
         elif name == "dedupe_folder":
             value = dedupe_folder(
