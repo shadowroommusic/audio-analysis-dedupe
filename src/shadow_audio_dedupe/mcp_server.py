@@ -5,11 +5,13 @@ import sys
 
 from .analyze import analyze_file, analyze_folder
 from .dedupe import dedupe_folder
+from .melody import hum_to_midi
 from .model import to_json
 
 TOOLS = {
     "analyze_file": "Report size, duration, sample rate, channels, codec and bitrate for one audio file.",
     "dedupe_folder": "Group exact SHA-256 duplicates and list near-duplicate candidates in a folder. Never deletes files.",
+    "hum_to_midi": "Detect the melody in a monophonic WAV recording (a hum) and write it as a Type-0 MIDI file.",
 }
 
 SERVER_NAME = "audio-analysis-dedupe"
@@ -31,6 +33,19 @@ def _schema(name: str) -> dict:
         return {
             "type": "object",
             "properties": {"path": {"type": "string", "description": "Absolute path to an audio file."}},
+            "required": ["path"],
+            "additionalProperties": False,
+        }
+    if name == "hum_to_midi":
+        return {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "WAV recording of the hummed melody."},
+                "out_path": {"type": "string", "description": "Where to write the .mid (default: next to the WAV)."},
+                "min_note_ms": {"type": "integer", "default": 120, "description": "Shorter blips are treated as noise."},
+                "tempo_bpm": {"type": "number", "default": 120},
+                "min_confidence": {"type": "number", "default": 0.5},
+            },
             "required": ["path"],
             "additionalProperties": False,
         }
@@ -94,6 +109,14 @@ def handle(message: dict) -> "dict | None":
                 recursive=bool(arguments.get("recursive", True)),
                 threshold=float(arguments.get("threshold", 0.72)),
                 max_candidates=int(arguments.get("max_candidates", 200)),
+            )
+        elif name == "hum_to_midi":
+            value = hum_to_midi(
+                arguments["path"],
+                arguments.get("out_path"),
+                min_note_ms=int(arguments.get("min_note_ms", 120)),
+                tempo_bpm=float(arguments.get("tempo_bpm", 120.0)),
+                min_confidence=float(arguments.get("min_confidence", 0.5)),
             )
         else:
             raise ValueError(f"Unknown tool: {name}")
